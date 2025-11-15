@@ -129,15 +129,13 @@ public final class PartyCommand {
         var partyManager = PartyManager.get(source.getServer());
         var result = partyManager.invitePlayer(PlayerRef.of(owner), PlayerRef.of(player));
         if (result.isOk()) {
-            source.sendFeedback(() -> PartyTexts.invitedSender(player).formatted(Formatting.GOLD), false);
-
-            var notification = PartyTexts.invitedReceiver(owner, result.party().getUuid())
-                    .formatted(Formatting.GOLD);
-
-            player.sendMessage(notification, false);
+            source.sendFeedback(() -> PartyTexts.invitedSender(player).formatted(Formatting.GREEN), false);
+            var notification = PartyTexts.invitedReceiver(owner, result.party().getUuid()).formatted(Formatting.GOLD);
+            player.sendMessage(notification.formatted(Formatting.GREEN));
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, player));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
@@ -153,17 +151,18 @@ public final class PartyCommand {
         for (var profile : profiles) {
             var partyManager = PartyManager.get(source.getServer());
             var result = partyManager.kickPlayer(PlayerRef.of(owner), PlayerRef.of(profile));
-            if (result.isOk() && result.party() instanceof Party) {
+            if (result.isOk()) {
                 Party party = result.party();
                 PlayerSet memberPlayers = party.getMemberPlayers();
                 PlayerRef.of(profile).ifOnline(server, player -> {
                     var message = PartyTexts.kickedSender(player);
-                    memberPlayers.sendMessage(message.formatted(Formatting.GOLD));
+                    memberPlayers.sendMessage(message);
                     player.sendMessage(PartyTexts.kickedReceiver().formatted(Formatting.RED), false);
                 });
             } else {
                 var error = result.error();
                 source.sendError(PartyTexts.displayError(error, profile.getName()));
+                return 0;
             }
         }
 
@@ -178,10 +177,12 @@ public final class PartyCommand {
         var partyManager = PartyManager.get(source.getServer());
         var result = partyManager.transferParty(PlayerRef.of(oldOwner), PlayerRef.of(newOwner));
         if (result.isOk()) {
-            source.sendFeedback(
+            if (newOwner.getUuid() != oldOwner.getUuid()) {
+                source.sendFeedback(
                     () -> PartyTexts.transferredSender(newOwner).formatted(Formatting.GOLD),
                     false
-            );
+                );
+            }
 
             newOwner.sendMessage(
                     PartyTexts.transferredReceiver(oldOwner).formatted(Formatting.GOLD),
@@ -190,6 +191,7 @@ public final class PartyCommand {
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, newOwner));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
@@ -209,24 +211,24 @@ public final class PartyCommand {
         return acceptInvite(ctx, partyManager.getParty(uuid));
     }
 
-    private static int acceptInvite(CommandContext<ServerCommandSource> ctx, Party party) throws CommandSyntaxException {
+    private static int acceptInvite(CommandContext<ServerCommandSource> ctx, Party party) {
         var source = ctx.getSource();
         var player = source.getPlayer();
 
         var partyManager = PartyManager.get(source.getServer());
         var result = partyManager.acceptInvite(PlayerRef.of(player), party);
         if (result.isOk()) {
-            var message = PartyTexts.joinSuccess(player);
-            party.getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
+            party.getMemberPlayers().sendMessage(PartyTexts.joinSuccess(player));
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, player));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int leave(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    private static int leave(CommandContext<ServerCommandSource> ctx) {
         var source = ctx.getSource();
         var player = source.getPlayer();
 
@@ -234,12 +236,13 @@ public final class PartyCommand {
         var result = partyManager.leaveParty(PlayerRef.of(player));
         if (result.isOk()) {
             var party = result.party();
-
             var message = PartyTexts.leaveSuccess(player);
-            party.getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
+            party.getMemberPlayers().sendMessage(message);
+            player.sendMessage(message);
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, player));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
@@ -250,15 +253,14 @@ public final class PartyCommand {
         var owner = source.getPlayer();
 
         var partyManager = PartyManager.get(source.getServer());
-        var result = partyManager.disbandParty(PlayerRef.of(owner));
+        var result = partyManager.disband(PlayerRef.of(owner));
         if (result.isOk()) {
             var party = result.party();
-
-            var message = PartyTexts.disbandSuccess();
-            party.getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
+            party.getMemberPlayers().sendMessage(PartyTexts.disbandSuccess());
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, owner));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
@@ -285,11 +287,11 @@ public final class PartyCommand {
         var partyManager = PartyManager.get(source.getServer());
         var result = partyManager.addPlayer(PlayerRef.of(player), party);
         if (result.isOk()) {
-            var message = PartyTexts.addSuccess(player);
-            party.getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
+            party.getMemberPlayers().sendMessage(PartyTexts.addSuccess(player));
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, player));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;
@@ -303,10 +305,12 @@ public final class PartyCommand {
         var result = partyManager.removePlayer(PlayerRef.of(player));
         if (result.isOk()) {
             var message = PartyTexts.removeSuccess(player);
-            result.party().getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
+            result.party().getMemberPlayers().sendMessage(message);
+            player.sendMessage(message);
         } else {
             var error = result.error();
             source.sendError(PartyTexts.displayError(error, player));
+            return 0;
         }
 
         return Command.SINGLE_SUCCESS;

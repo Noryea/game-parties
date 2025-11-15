@@ -11,17 +11,19 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class Party {
+    public static final int PARTY_CAPACITY = 4;
+
+    private final UUID uuid;
     private PlayerRef owner;
 
     private final List<PlayerRef> members = new ObjectArrayList<>();
     private final Set<PlayerRef> pendingMembers = new ObjectOpenHashSet<>();
-
     private final MutablePlayerSet memberPlayers;
 
-    private final UUID uuid;
 
     Party(MinecraftServer server, PlayerRef owner) {
         this.memberPlayers = new MutablePlayerSet(server);
+        this.add(owner);
         this.setOwner(owner);
 
         this.uuid = UUID.randomUUID();
@@ -31,9 +33,16 @@ public final class Party {
         return this.owner;
     }
 
-    void setOwner(PlayerRef owner) {
-        this.owner = owner;
-        this.add(owner);
+    boolean setOwner(PlayerRef owner) {
+        if (this.contains(owner)) {
+            this.owner = owner;
+            return true;
+        }
+        return false;
+    }
+
+    boolean isFull() {
+        return this.members.size() >= PARTY_CAPACITY;
     }
 
     boolean invite(PlayerRef player) {
@@ -43,26 +52,26 @@ public final class Party {
         return this.pendingMembers.add(player);
     }
 
-    void add(PlayerRef player) {
-        if (this.memberPlayers.add(player)) {
-            this.members.add(player);
+    boolean acceptInvite(PlayerRef player) {
+        if (this.isInvited(player)) {
+            this.add(player);
+            return true;
         }
+        return false;
+    }
+
+    void add(PlayerRef player) {
+        this.memberPlayers.add(player);
+        this.members.add(player);
+        this.pendingMembers.remove(player);
     }
 
     boolean remove(PlayerRef player) {
         if (this.memberPlayers.remove(player)) {
             this.members.remove(player);
-            return true;
+            return true; // succeed to remove from members
         }
-        return this.pendingMembers.remove(player);
-    }
-
-    boolean acceptInvite(PlayerRef player) {
-        if (this.pendingMembers.remove(player)) {
-            this.add(player);
-            return true;
-        }
-        return false;
+        return this.pendingMembers.remove(player); // if succeed to remove from pending
     }
 
     public boolean contains(PlayerRef player) {

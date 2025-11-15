@@ -16,15 +16,8 @@ public final class PartyTexts {
         return displayError(error, player.getGameProfile().getName());
     }
 
-    public static MutableText displayError(PartyError error, String player) {
-        return switch (error) {
-            case DOES_NOT_EXIST -> Text.translatable("text.game_parties.party.error.does_not_exist");
-            case ALREADY_INVITED -> Text.translatable("text.game_parties.party.error.already_invited", player);
-            case ALREADY_IN_PARTY -> Text.translatable("text.game_parties.party.error.already_in_party");
-            case CANNOT_REMOVE_SELF -> Text.translatable("text.game_parties.party.error.cannot_remove_self");
-            case NOT_IN_PARTY -> Text.translatable("text.game_parties.party.error.not_in_party", player);
-            case NOT_INVITED -> Text.translatable("text.game_parties.party.error.not_invited");
-        };
+    public static MutableText displayError(PartyError error, String playerName) {
+        return PartyError.errorText(error, playerName);
     }
 
     public static MutableText joinSuccess(ServerPlayerEntity player) {
