@@ -10,6 +10,7 @@ public enum PartyError {
     ALREADY_IN_A_PARTY,
     CANNOT_REMOVE_SELF,
     NOT_IN_PARTY,
+    NOT_IN_ANY_PARTY,
     NOT_INVITED,
     PARTY_FULL;
 
@@ -21,6 +22,7 @@ public enum PartyError {
             case ALREADY_IN_A_PARTY -> Text.translatable("text.game_parties.party.error.already_in_your_party");
             case CANNOT_REMOVE_SELF -> Text.translatable("text.game_parties.party.error.cannot_remove_self");
             case NOT_IN_PARTY -> Text.translatable("text.game_parties.party.error.not_in_party", playerName);
+            case NOT_IN_ANY_PARTY -> Text.translatable("text.game_parties.party.error.not_in_any_party");
             case NOT_INVITED -> Text.translatable("text.game_parties.party.error.not_invited");
             case PARTY_FULL -> Text.translatable("text.game_parties.party.error.party_full", Party.PARTY_CAPACITY);
         };

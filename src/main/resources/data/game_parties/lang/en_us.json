@@ -7,6 +7,7 @@
   "text.game_parties.party.error.cannot_remove_self": "Cannot remove yourself from the party!",
   "text.game_parties.party.error.does_not_exist": "You do not control any party!",
   "text.game_parties.party.error.not_in_party": "%s is not in this party!",
+  "text.game_parties.party.error.not_in_any_party": "Player is not in any party!",
   "text.game_parties.party.error.not_invited": "You are not invited to this party!",
   "text.game_parties.party.error.party_full": "This party is full! (Maximum %s members)",
   "text.game_parties.party.invited.receiver": "You have been invited to join %s's party! ",

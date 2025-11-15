@@ -8,7 +8,9 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.command.argument.UuidArgumentType;
 import net.minecraft.screen.ScreenTexts;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import xyz.nucleoid.plasmid.api.game.player.PlayerSet;
@@ -25,10 +27,11 @@ public final class PartyCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(
             literal("party")
-                .then(literal("list")
+                .then(literal("list_all")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(PartyCommand::listParties)
                 )
+                .then(literal("list").executes(PartyCommand::listPlayerParty))
                 .then(literal("invite")
                     .then(argument("player", EntityArgumentType.player())
                     .executes(PartyCommand::invitePlayer)
@@ -55,7 +58,7 @@ public final class PartyCommand {
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(argument("player", EntityArgumentType.player())
                         .then(argument("owner", EntityArgumentType.player())
-                            .executes(PartyCommand::addPlayerByOwner)
+                            .executes(PartyCommand::addPlayerByPlayer)
                         )
                         .then(argument("party", UuidArgumentType.uuid())
                             .executes(PartyCommand::addPlayerByUuid)
@@ -86,38 +89,61 @@ public final class PartyCommand {
         parties.sort(Comparator.comparing(Party::getUuid));
 
         source.sendFeedback(() -> {
-            var text = Text.empty();
             boolean first = true;
-
+            var text = Text.empty();
             for (var party : parties) {
                 if (first) {
                     first = false;
                 } else {
                     text.append(ScreenTexts.LINE_BREAK);
                 }
-
-                text.append(PartyTexts.listEntry(party.getUuid()));
-
-                var members = new ArrayList<>(party.getMembers());
-                members.sort(Comparator.comparing(PlayerRef::id));
-
-                for (var member : members) {
-                    text.append(ScreenTexts.LINE_BREAK);
-
-                    if (party.isOwner(member)) {
-                        text.append(PartyTexts.listMemberEntryType(member, server, PartyTexts.listMemberTypeOwner().formatted(Formatting.LIGHT_PURPLE)));
-                    } else if (party.contains(member)) {
-                        text.append(PartyTexts.listMemberEntry(member, server));
-                    } else {
-                        text.append(PartyTexts.listMemberEntryType(member, server, PartyTexts.listMemberTypePending().formatted(Formatting.GRAY)));
-                    }
-                }
+                text.append(getPartyList(server, party));
             }
+            text.append(ScreenTexts.LINE_BREAK);
 
             return text;
         }, false);
 
         return parties.size();
+    }
+
+    private static int listPlayerParty(CommandContext<ServerCommandSource> ctx) {
+        var source = ctx.getSource();
+        var server = source.getServer();
+        var partyManager = PartyManager.get(server);
+        var player = source.getPlayer();
+
+        var party = partyManager.getParty(PlayerRef.of(player));
+        if (party == null) {
+            source.sendError(PartyError.errorText(PartyError.NOT_IN_ANY_PARTY, player.getGameProfile().getName()));
+            return 0;
+        }
+
+        source.sendFeedback(() -> getPartyList(server, party).append(ScreenTexts.LINE_BREAK), false);
+
+        return party.getMemberPlayers().size();
+    }
+
+    private static MutableText getPartyList(MinecraftServer server, Party party) {
+        var text = Text.empty();
+        text.append(PartyTexts.listEntry(party.getUuid()));
+
+        var members = new ArrayList<>(party.getMembers());
+        members.sort(Comparator.comparing(PlayerRef::id));
+
+        for (var member : members) {
+            text.append(ScreenTexts.LINE_BREAK);
+
+            if (party.isOwner(member)) {
+                text.append(PartyTexts.listMemberEntryType(member, server, PartyTexts.listMemberTypeOwner().formatted(Formatting.LIGHT_PURPLE)));
+            } else if (party.contains(member)) {
+                text.append(PartyTexts.listMemberEntry(member, server));
+            } else {
+                text.append(PartyTexts.listMemberEntryType(member, server, PartyTexts.listMemberTypePending().formatted(Formatting.GRAY)));
+            }
+        }
+
+        return text;
     }
 
     private static int invitePlayer(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
@@ -204,7 +230,7 @@ public final class PartyCommand {
         return acceptInvite(ctx, partyManager.getOwnParty(PlayerRef.of(owner)));
     }
 
-    private static int acceptInviteByUuid(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    private static int acceptInviteByUuid(CommandContext<ServerCommandSource> ctx) {
         var uuid = UuidArgumentType.getUuid(ctx, "party");
         var partyManager = PartyManager.get(ctx.getSource().getServer());
 
@@ -248,7 +274,7 @@ public final class PartyCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int disband(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    private static int disband(CommandContext<ServerCommandSource> ctx) {
         var source = ctx.getSource();
         var owner = source.getPlayer();
 
@@ -266,11 +292,14 @@ public final class PartyCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int addPlayerByOwner(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    private static int addPlayerByPlayer(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
         var owner = EntityArgumentType.getPlayer(ctx, "owner");
         var partyManager = PartyManager.get(ctx.getSource().getServer());
-
-        return addPlayer(ctx, partyManager.getOrCreateOwnParty(PlayerRef.of(owner)));
+        var party = partyManager.getParty(PlayerRef.of(owner));
+        if (party == null) {
+            party = partyManager.getOrCreateOwnParty(PlayerRef.of(owner));
+        }
+        return addPlayer(ctx, party);
     }
 
     private static int addPlayerByUuid(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {

@@ -210,7 +210,7 @@ public final class PartyManager {
     public PartyResult removePlayer(PlayerRef player) {
         var party = this.getParty(player);
         if (party == null) {
-            return PartyResult.err(PartyError.NOT_IN_PARTY);
+            return PartyResult.err(PartyError.NOT_IN_ANY_PARTY);
         }
         removePlayerFromParty(player, party);
         return PartyResult.ok(party);
