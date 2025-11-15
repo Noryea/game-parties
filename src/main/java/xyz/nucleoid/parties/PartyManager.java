@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Formatting;
@@ -12,11 +13,7 @@ import xyz.nucleoid.plasmid.api.event.GameEvents;
 import xyz.nucleoid.plasmid.api.game.GameSpaceManager;
 import xyz.nucleoid.plasmid.api.util.PlayerRef;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.UUID;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public final class PartyManager {
@@ -41,7 +38,7 @@ public final class PartyManager {
         });
 
         GameEvents.COLLECT_PLAYERS_FOR_JOIN.register((gameSpace, player, additional) -> {
-            var partyManager = PartyManager.get(player.server);
+            var partyManager = PartyManager.get(player.getWorld().getServer());
             var gameSpaceManager = GameSpaceManager.get();
 
             var members = partyManager.getPartyMembers(player, true);
@@ -61,7 +58,7 @@ public final class PartyManager {
             for (ServerPlayerEntity player : players) {
                 if (ungroupedPlayers.contains(player)) {
                     var members = partyManager.getPartyMembers(player, false);
-
+                    System.out.println(player.getNameForScoreboard() + " members: " + members.stream().map(PlayerEntity::getNameForScoreboard).toList());
                     allocator.group(members);
                     ungroupedPlayers.removeAll(members);
                 }
@@ -115,9 +112,7 @@ public final class PartyManager {
             var nextMember = members.get(0);
             party.setOwner(nextMember);
 
-            nextMember.ifOnline(this.server, nextPlayer -> {
-                nextPlayer.sendMessage(PartyTexts.transferredReceiver(player), false);
-            });
+            nextMember.ifOnline(this.server, nextPlayer -> nextPlayer.sendMessage(PartyTexts.transferredReceiver(player), false));
         }
     }
 

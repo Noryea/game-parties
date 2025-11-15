@@ -11,6 +11,7 @@ import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import xyz.nucleoid.plasmid.api.game.player.PlayerSet;
 import xyz.nucleoid.plasmid.api.util.PlayerRef;
 
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ public final class PartyCommand {
     }
     // @formatter:on
 
-    private static int listParties(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    private static int listParties(CommandContext<ServerCommandSource> ctx) {
         var source = ctx.getSource();
         var server = source.getServer();
 
@@ -152,13 +153,12 @@ public final class PartyCommand {
         for (var profile : profiles) {
             var partyManager = PartyManager.get(source.getServer());
             var result = partyManager.kickPlayer(PlayerRef.of(owner), PlayerRef.of(profile));
-            if (result.isOk()) {
-                var party = result.party();
-
-                var message = PartyTexts.kickedSender(owner);
-                party.getMemberPlayers().sendMessage(message.formatted(Formatting.GOLD));
-
+            if (result.isOk() && result.party() instanceof Party) {
+                Party party = result.party();
+                PlayerSet memberPlayers = party.getMemberPlayers();
                 PlayerRef.of(profile).ifOnline(server, player -> {
+                    var message = PartyTexts.kickedSender(player);
+                    memberPlayers.sendMessage(message.formatted(Formatting.GOLD));
                     player.sendMessage(PartyTexts.kickedReceiver().formatted(Formatting.RED), false);
                 });
             } else {
